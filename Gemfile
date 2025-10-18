@@ -33,7 +33,7 @@ gem "rack-cors"
 gem "jsonapi-serializer"
 
 # Pagination
-gem "pagy", "~> 6.0"
+gem "pagy", "~> 9.4"
 
 # Oracle database adapter (for production only - requires Oracle Instant Client)
 # Uncomment when deploying to production with Oracle
