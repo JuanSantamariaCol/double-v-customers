@@ -1,6 +1,6 @@
 # Customers Service API
 
-API REST simple para gestión de clientes con patrón Outbox.
+API REST simple para gestión de clientes para el sistema de facturación electrónica FactuMarket S.A.
 
 ---
 
