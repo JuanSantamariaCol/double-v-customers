@@ -1,0 +1,33 @@
+# Dockerfile para desarrollo
+FROM ruby:3.2.2-alpine
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache \
+    build-base \
+    postgresql-dev \
+    tzdata \
+    bash \
+    git \
+    nodejs \
+    npm
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar Gemfile y Gemfile.lock
+COPY Gemfile Gemfile.lock ./
+
+# Instalar gemas
+RUN bundle install
+
+# Copiar el resto del código
+COPY . .
+
+# Crear directorio para PIDs
+RUN mkdir -p tmp/pids
+
+# Exponer puerto
+EXPOSE 3000
+
+# Comando por defecto (será sobrescrito por docker-compose)
+CMD ["rails", "server", "-b", "0.0.0.0"]

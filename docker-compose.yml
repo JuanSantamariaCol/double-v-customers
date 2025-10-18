@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: customers_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: customers_service_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customers_network
+
+  # Redis for Sidekiq
+  redis:
+    image: redis:7-alpine
+    container_name: customers_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customers_network
+
+  # Rails API Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: customers_app
+    command: bash -c "bundle install && rm -f tmp/pids/server.pid && bin/rails db:create && bin/rails db:migrate && bin/rails server -b 0.0.0.0"
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+    ports:
+      - "3000:3000"
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/customers_service_development
+      - REDIS_URL=redis://redis:6379/0
+      - RAILS_MAX_THREADS=5
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    networks:
+      - customers_network
+
+  # Sidekiq Worker for Outbox Pattern
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: customers_worker
+    command: bash -c "bundle install && bundle exec sidekiq -C config/sidekiq.yml"
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/customers_service_development
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - customers_network
+
+  # Outbox Publisher Scheduler (ejecuta el job cada 10 segundos)
+  outbox_scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: customers_outbox_scheduler
+    command: >
+      bash -c "
+      bundle install &&
+      while true; do
+        echo '[Outbox Scheduler] Publishing pending messages...'
+        bin/rails runner 'OutboxPublisherJob.perform_now'
+        echo '[Outbox Scheduler] Waiting 10 seconds...'
+        sleep 10
+      done
+      "
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/customers_service_development
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - customers_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  bundle_cache:
+
+networks:
+  customers_network:
+    driver: bridge

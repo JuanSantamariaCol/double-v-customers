@@ -1,0 +1,23 @@
+---
+:concurrency: 5
+:timeout: 25
+:verbose: true
+:queues:
+  - default
+  - outbox
+
+# Redis connection
+:redis:
+  url: <%= ENV.fetch("REDIS_URL", "redis://localhost:6379/0") %>
+
+# Production specific settings
+production:
+  :concurrency: 10
+
+# Development specific settings
+development:
+  :concurrency: 5
+
+# Test specific settings
+test:
+  :concurrency: 2

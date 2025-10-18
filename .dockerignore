@@ -3,9 +3,9 @@
 .gitignore
 .gitattributes
 
-# Documentation
+# Documentation (except DOCKER.md)
 README.md
-*.md
+!DOCKER.md
 
 # Logs and temp files
 log/*
@@ -13,15 +13,16 @@ tmp/*
 *.log
 *.pid
 
-# Development and test files
-spec/
-test/
+# Development and test files (keep for development image)
+# spec/
+# test/
 coverage/
 
 # Environment files
 .env
-.env.*
+.env.local
 !.env.example
+!.env.docker
 
 # IDE and editor files
 .vscode/
