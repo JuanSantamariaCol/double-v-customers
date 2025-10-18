@@ -1,7 +1,7 @@
 module Customers
   class CreatorService
     def initialize(params)
-      @params = params
+      @params = params.to_h.symbolize_keys
     end
 
     def call
@@ -14,9 +14,8 @@ module Customers
         ServiceResult.failure(customer.errors)
       end
     rescue ArgumentError => e
-
       customer = Customer.new(@params.except(:person_type))
-      customer.errors.add(:person_type, e.message)
+      customer.errors.add(:person_type, e.message) if e.message.include?("is not a valid person_type")
       ServiceResult.failure(customer.errors)
     end
   end

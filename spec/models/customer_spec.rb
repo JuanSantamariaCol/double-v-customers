@@ -110,4 +110,139 @@ RSpec.describe Customer, type: :model do
       expect(build(:customer, :company)).to be_valid
     end
   end
+
+  describe 'outbox pattern' do
+    describe 'when customer is created' do
+      it 'creates outbox message' do
+        expect {
+          create(:customer)
+        }.to change(OutboxMessage, :count).by(1)
+      end
+
+      it 'creates message with correct event_type' do
+        customer = create(:customer)
+        message = OutboxMessage.last
+
+        expect(message.event_type).to eq('customer.created')
+      end
+
+      it 'creates message with pending status' do
+        customer = create(:customer)
+        message = OutboxMessage.last
+
+        expect(message).to be_pending
+      end
+
+      it 'creates message with correct aggregate information' do
+        customer = create(:customer)
+        message = OutboxMessage.last
+
+        expect(message.aggregate_id).to eq(customer.id.to_s)
+        expect(message.aggregate_type).to eq('Customer')
+      end
+
+      it 'creates message with customer data in payload' do
+        customer = create(:customer, name: 'John Doe', email: 'john@example.com')
+        message = OutboxMessage.last
+        payload = JSON.parse(message.payload)
+
+        expect(payload['id']).to eq(customer.id)
+        expect(payload['name']).to eq('John Doe')
+        expect(payload['email']).to eq('john@example.com')
+        expect(payload['person_type']).to eq(customer.person_type)
+        expect(payload['identification']).to eq(customer.identification)
+        expect(payload['phone']).to eq(customer.phone)
+        expect(payload['address']).to eq(customer.address)
+        expect(payload['active']).to eq(customer.active)
+        expect(payload['timestamp']).to be_present
+      end
+    end
+
+    describe 'when customer is updated' do
+      it 'creates outbox message' do
+        customer = create(:customer)
+
+        expect {
+          customer.update(name: 'Updated Name')
+        }.to change(OutboxMessage, :count).by(1)
+      end
+
+      it 'creates message with correct event_type' do
+        customer = create(:customer)
+        customer.update(name: 'Updated Name')
+        message = OutboxMessage.last
+
+        expect(message.event_type).to eq('customer.updated')
+      end
+
+      it 'creates message with updated data in payload' do
+        customer = create(:customer)
+        customer.update(name: 'Updated Name', email: 'updated@example.com')
+        message = OutboxMessage.last
+        payload = JSON.parse(message.payload)
+
+        expect(payload['name']).to eq('Updated Name')
+        expect(payload['email']).to eq('updated@example.com')
+      end
+
+      it 'does not create message if update fails' do
+        customer = create(:customer)
+        initial_count = OutboxMessage.count
+
+        customer.update(email: 'invalid-email')
+
+        expect(OutboxMessage.count).to eq(initial_count)
+      end
+    end
+
+    describe 'when customer is deleted' do
+      it 'creates outbox message' do
+        customer = create(:customer)
+
+        expect {
+          customer.soft_delete
+        }.to change(OutboxMessage, :count).by(1)
+      end
+
+      it 'creates message with correct event_type' do
+        customer = create(:customer)
+        customer.soft_delete
+        message = OutboxMessage.last
+
+        expect(message.event_type).to eq('customer.deleted')
+      end
+
+      it 'creates message with deleted customer data in payload' do
+        customer = create(:customer)
+        customer_id = customer.id
+        customer_name = customer.name
+
+        customer.soft_delete
+        message = OutboxMessage.last
+        payload = JSON.parse(message.payload)
+
+        expect(payload['id']).to eq(customer_id)
+        expect(payload['name']).to eq(customer_name)
+      end
+    end
+
+    describe 'transactional consistency' do
+      it 'creates both customer and outbox message in same transaction' do
+        expect {
+          create(:customer)
+        }.to change(Customer, :count).by(1)
+         .and change(OutboxMessage, :count).by(1)
+      end
+
+      it 'does not create outbox message if customer creation fails' do
+        expect {
+          begin
+            create(:customer, email: 'invalid-email')
+          rescue ActiveRecord::RecordInvalid
+            # Expected to fail
+          end
+        }.not_to change(OutboxMessage, :count)
+      end
+    end
+  end
 end

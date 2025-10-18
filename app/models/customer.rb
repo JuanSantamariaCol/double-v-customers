@@ -1,4 +1,6 @@
 class Customer < ApplicationRecord
+  include OutboxPublisher
+
   enum :person_type, { natural: 0, company: 1 }, prefix: :person
 
   # Validations

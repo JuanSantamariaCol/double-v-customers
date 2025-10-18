@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_17_205335) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_18_014900) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -27,5 +27,19 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_17_205335) do
     t.index ["active"], name: "index_customers_on_active"
     t.index ["email"], name: "index_customers_on_email"
     t.index ["identification"], name: "index_customers_on_identification", unique: true
+  end
+
+  create_table "outbox_messages", force: :cascade do |t|
+    t.string "aggregate_id", null: false
+    t.string "aggregate_type", null: false
+    t.string "event_type", null: false
+    t.text "payload", null: false
+    t.integer "status", limit: 2, default: 0, null: false
+    t.datetime "published_at", precision: nil
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["aggregate_type", "aggregate_id"], name: "index_outbox_messages_on_aggregate_type_and_aggregate_id"
+    t.index ["status", "created_at"], name: "index_outbox_messages_on_status_and_created_at"
   end
 end
