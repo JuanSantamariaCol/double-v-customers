@@ -61,6 +61,46 @@ Deberías ver:
 
 ---
 
+## Verificación Completa del Sistema
+
+Para verificar que todo funciona correctamente desde cero, ejecuta estos comandos en orden:
+
+**1. Verificar que todos los servicios están corriendo:**
+```bash
+docker-compose ps
+```
+Deberías ver 5 contenedores con estado "Up" o "Up (healthy)".
+
+**2. Ejecutar todos los tests (debe pasar 105 tests):**
+```bash
+docker-compose exec -e RAILS_ENV=test -e DATABASE_URL=postgresql://postgres:postgres@db:5432/customers_service_test app bundle exec rspec
+```
+
+**3. Crear un cliente de prueba:**
+```bash
+curl -X POST http://localhost:3000/api/v1/customers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer": {
+      "identification": "9876543210",
+      "name": "Maria Lopez",
+      "email": "maria.lopez@example.com",
+      "phone": "555-9999",
+      "address": "Avenida Siempre Viva 742",
+      "person_type": "natural"
+    }
+  }'
+```
+
+**4. Verificar que el evento se publicó automáticamente (espera 15 segundos):**
+```bash
+sleep 15 && docker-compose exec app bin/rails outbox:stats
+```
+
+Deberías ver el evento `customer.created` como `[PUBLISHED]`.
+
+---
+
 ## Comandos Útiles
 
 ```bash
