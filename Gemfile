@@ -34,7 +34,7 @@ gem "jsonapi-serializer"
 gem "pagy", "~> 6.0"
 
 # Background job processing
-gem "sidekiq", "~> 7.0"
+gem "sidekiq", "~> 8.0"
 gem "redis", ">= 4.0.1"
 
 # Oracle database adapter (for production only - requires Oracle Instant Client)
