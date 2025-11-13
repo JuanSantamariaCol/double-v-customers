@@ -31,7 +31,7 @@ gem "rack-cors"
 gem "jsonapi-serializer"
 
 # Pagination
-gem "pagy", "~> 6.0"
+gem "pagy", "~> 43.0"
 
 # Background job processing
 gem "sidekiq", "~> 7.0"
